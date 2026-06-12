@@ -1,0 +1,21 @@
+services:
+  fix-mongodb:
+    image: mongo:7
+    container_name: fix-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-root}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-example}
+    volumes:
+      - fix-mongodb-data:/data/db
+    networks:
+      - fix
+  
+volumes:
+  fix-mongodb-data:
+
+networks:
+  fix:
+    driver: bridge
