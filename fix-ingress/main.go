@@ -1,40 +1,22 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
-// TODO: move to MongoDB
-var fixList = []Fix{}
-
-func getCurrentTimestamp() string {
-	return time.Now().Format(time.RFC3339)
-}
-
-func getNewUUID() (string, error) {
-	id, err := uuid.NewRandom()
-
-	if err != nil {
-		return "", err
-	}
-
-	return id.String(), nil
-}
-
 func main() {
+	client := connectMongo()
+	defer client.Disconnect(context.Background())
+
 	router := gin.Default()
 	router.POST("/fix", postFix)
 
 	router.Run("localhost:8080")
-}
-
-func getFixList(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, fixList)
 }
 
 func postFix(c *gin.Context) {
@@ -45,22 +27,29 @@ func postFix(c *gin.Context) {
 		return
 	}
 
-	var newFix Fix
-	newFix.Message = inputMsg.Message
+	newId, uuiderr := getNewUUID()
 
-	newId, err := getNewUUID()
-
-	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, err.Error())
+	if uuiderr != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": uuiderr.Error()})
 		return
 	}
 
+	var newFix Fix
+	newFix.Message = inputMsg.Message
 	newFix.ID = newId
-	newFix.Timestamp = getCurrentTimestamp()
+	newFix.Timestamp = time.Now()
 
-	fixList = append(fixList, newFix)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	fmt.Printf("Id: %s Timestamp: %s Message: %s", newFix.ID, newFix.Timestamp, newFix.Message)
+	_, err := fixCollection.InsertOne(ctx, newFix)
+
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	log.Printf("Id: %s Timestamp: %s Message: %s", newFix.ID, newFix.Timestamp, newFix.Message)
 
 	c.IndentedJSON(http.StatusCreated, newFix)
 }
