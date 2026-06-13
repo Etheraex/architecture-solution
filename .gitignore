@@ -28,3 +28,6 @@ vendor/
 
 # Environment files
 .env
+
+# Rust workspace files
+/fix-test/target
