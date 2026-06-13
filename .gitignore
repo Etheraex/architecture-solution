@@ -24,7 +24,8 @@ vendor/
 /dist/
 
 # Go build binary (compiled from `go build` in the module dir)
-/fix-ingress/fix-ingress
+*/fix-ingress/fix-ingress
+*/fix-consumer/fix-consumer
 
 # Environment files
 .env

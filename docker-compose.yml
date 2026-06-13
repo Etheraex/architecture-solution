@@ -12,9 +12,25 @@ services:
       - fix-mongodb-data:/data/db
     networks:
       - fix
-  
+
+  fix-rabbitmq:
+    image: rabbitmq:4-management
+    container_name: fix-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672" # management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - fix-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - fix
+
 volumes:
   fix-mongodb-data:
+  fix-rabbitmq-data:
 
 networks:
   fix:
