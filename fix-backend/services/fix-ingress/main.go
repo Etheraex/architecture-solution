@@ -15,7 +15,7 @@ func main() {
 	router := gin.Default()
 	router.POST("/fix", func(c *gin.Context) { postFix(c, mq) })
 
-	router.Run("localhost:8080")
+	router.Run(":8080")
 }
 
 func postFix(c *gin.Context, mq *fixshared.Client) {

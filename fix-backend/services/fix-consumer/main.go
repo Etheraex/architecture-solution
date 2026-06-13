@@ -42,7 +42,7 @@ func main() {
 			if mongo.IsDuplicateKeyError(err) {
 				log.Printf("Duplicate fix %s, acking", newFix.ID)
 				d.Ack(false)
-				return
+				continue
 			}
 
 			log.Printf("Insert failed, requeueing: %v", err.Error())

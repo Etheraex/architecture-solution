@@ -10,6 +10,11 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-example}
     volumes:
       - fix-mongodb-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - fix
 
@@ -25,6 +30,40 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     volumes:
       - fix-rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - fix
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  fix-ingress:
+    build:
+      context: ./fix-backend
+      dockerfile: services/fix-ingress/Dockerfile
+    environment:
+      RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@fix-rabbitmq:5672/
+    ports:
+      - "8080:8080"
+    depends_on:
+      fix-rabbitmq:
+        condition: service_healthy
+    networks:
+      - fix
+
+  fix-consumer:
+    build:
+      context: ./fix-backend
+      dockerfile: services/fix-consumer/Dockerfile
+    environment:
+      RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@fix-rabbitmq:5672/
+      MONGO_URI: mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@fix-mongodb:27017/?authSource=admin
+    depends_on:
+      fix-rabbitmq:
+        condition: service_healthy
+      fix-mongodb:
+        condition: service_healthy
     networks:
       - fix
 
