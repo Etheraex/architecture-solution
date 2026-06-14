@@ -1,4 +1,22 @@
 services:
+  fix-traefik:
+    image: traefik:v3.7
+    container_name: fix-traefik
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+    ports:
+      - "80:80"
+      - "8081:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - fix
+
   fix-mongodb:
     image: mongo:7
     container_name: fix-mongodb
@@ -44,13 +62,16 @@ services:
       dockerfile: services/fix-ingress/Dockerfile
     environment:
       RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@fix-rabbitmq:5672/
-    ports:
-      - "8080:8080"
     depends_on:
       fix-rabbitmq:
         condition: service_healthy
     networks:
       - fix
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fix-ingress.rule=PathPrefix(`/fix`)"
+      - "traefik.http.routers.fix-ingress.entrypoints=web"
+      - "traefik.http.services.fix-ingress.loadbalancer.server.port=8080"
 
   fix-consumer:
     build:
