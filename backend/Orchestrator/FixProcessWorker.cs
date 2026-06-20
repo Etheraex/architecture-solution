@@ -1,12 +1,13 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text.Json;
+using FixBackendShared.Models;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace Orchestrator;
 
-public record FixPersistedMessage(string Id, string Message);
-
-public class FixProcessWorker(ILogger<FixProcessWorker> logger) : BackgroundService
+public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFactory httpClientFactory) : BackgroundService
 {
 	private const string QueueName = "fix_messages_process";
 
@@ -16,11 +17,16 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger) : BackgroundServ
 	};
 
 	private readonly ILogger<FixProcessWorker> _logger = logger;
+	private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
+	private CancellationToken _cancellationToken;
+
 	private IConnection? _connection;
 	private IChannel? _channel;
 
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken)
 	{
+		_cancellationToken = cancellationToken;
+
 		var uri = Environment.GetEnvironmentVariable("RABBITMQ_URI")
 			?? throw new InvalidOperationException("RABBITMQ_URI is not set");
 
@@ -52,7 +58,7 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger) : BackgroundServ
 	{
 		try
 		{
-			var evt = JsonSerializer.Deserialize<FixPersistedMessage>(args.Body.Span, JsonOptions);
+			var evt = JsonSerializer.Deserialize<FixProcessRequest>(args.Body.Span, JsonOptions);
 
 			if (evt is null)
 			{
@@ -61,7 +67,19 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger) : BackgroundServ
 				return;
 			}
 
-			_logger.LogInformation("Fix {Id} persisted", evt.Id);
+			using var http = _httpClientFactory.CreateClient("fix-processor");
+			using var response = await http.PostAsJsonAsync("/process", evt, _cancellationToken);
+
+			if (response.StatusCode == HttpStatusCode.UnprocessableContent)
+			{
+				_logger.LogWarning("Fix {Id} rejected as unprocessable, dropping", evt.Id);
+				await _channel!.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: false);
+				return;
+			}
+
+			response.EnsureSuccessStatusCode();
+
+			_logger.LogInformation("Fix {Id} processed", evt.Id);
 
 			await _channel!.BasicAckAsync(args.DeliveryTag, multiple: false);
 		}

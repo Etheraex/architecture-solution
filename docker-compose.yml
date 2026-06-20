@@ -88,6 +88,31 @@ services:
     networks:
       - fix
 
+  fix-processor:
+    build:
+      context: ./backend
+      dockerfile: FixProcessor/Dockerfile
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+    networks:
+      - internal
+
+  orchestrator:
+    build:
+      context: ./backend
+      dockerfile: Orchestrator/Dockerfile
+    environment:
+      RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@fix-rabbitmq:5672/
+      FIXPROCESSOR_URL: http://fix-processor:8080
+    depends_on:
+      fix-rabbitmq:
+        condition: service_healthy
+      fix-processor:
+        condition: service_started
+    networks:
+      - fix
+      - internal
+
 volumes:
   fix-mongodb-data:
   fix-rabbitmq-data:
@@ -95,3 +120,6 @@ volumes:
 networks:
   fix:
     driver: bridge
+  internal:
+    driver: bridge
+    internal: true
