@@ -17,6 +17,11 @@ type Fix struct {
 	IsProcessed bool      `json:"isProcessed" bson:"isProcessed"`
 }
 
+type FixPersisted struct {
+	ID      string `json:"id"`
+	Message string `json:"message"`
+}
+
 func NewFix(message string) (Fix, error) {
 	id, err := uuid.NewRandom()
 	if err != nil {

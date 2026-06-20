@@ -14,10 +14,13 @@ func main() {
 	client := connectMongo()
 	defer client.Disconnect(context.Background())
 
-	mq := fixshared.Connect("fix_messages")
-	defer mq.Close()
+	mqFixIngress := fixshared.Connect("fix_messages_ingress")
+	defer mqFixIngress.Close()
 
-	deliveries, err := mq.Consume()
+	mqFixProcess := fixshared.Connect("fix_messages_process")
+	defer mqFixProcess.Close()
+
+	deliveries, err := mqFixIngress.Consume()
 
 	if err != nil {
 		log.Fatalf("RabbitMQ consume: %v", err.Error())
@@ -51,6 +54,23 @@ func main() {
 		}
 
 		log.Printf("Stored fix %s", newFix.ID)
-		d.Ack(false)
+		d.Ack(false) // inbound message confirmed, fix is persisted
+
+		// TODO: add retry logic for outbound queue publishing
+		eventBody, err := json.Marshal(fixshared.FixPersisted{
+			ID:      newFix.ID,
+			Message: newFix.Message,
+		})
+
+		if err != nil {
+			log.Printf("Marshalling persisted event failed %s, requeueing: %v", newFix.ID, err)
+			continue
+		}
+
+		if err := mqFixProcess.Publish(context.Background(), eventBody); err != nil {
+			log.Printf("Publish persisted event failed %s, requeueing: %v", newFix.ID, err)
+			continue
+		}
+
 	}
 }

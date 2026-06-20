@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	mq := fixshared.Connect("fix_messages")
+	mq := fixshared.Connect("fix_messages_ingress")
 	defer mq.Close()
 
 	router := gin.Default()
