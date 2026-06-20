@@ -63,14 +63,13 @@ func main() {
 		})
 
 		if err != nil {
-			log.Printf("Marshalling persisted event failed %s, requeueing: %v", newFix.ID, err)
+			log.Printf("Marshalling persisted event failed for %s: %v", newFix.ID, err)
 			continue
 		}
 
 		if err := mqFixProcess.Publish(context.Background(), eventBody); err != nil {
-			log.Printf("Publish persisted event failed %s, requeueing: %v", newFix.ID, err)
+			log.Printf("Publish persisted event failed %s: %v", newFix.ID, err)
 			continue
 		}
-
 	}
 }

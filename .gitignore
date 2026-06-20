@@ -1,3 +1,6 @@
+# VS Code config
+.vscode
+
 # Binaries
 *.exe
 *.exe~
@@ -32,3 +35,7 @@ vendor/
 
 # Rust workspace files
 /fix-test/target
+
+# C# build output
+**/obj
+**/bin
