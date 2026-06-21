@@ -1,6 +1,15 @@
+using FixBackendShared.Logging;
 using Orchestrator;
+using Serilog;
 
 var builder = Host.CreateApplicationBuilder(args);
+builder.Logging.ClearProviders();
+
+builder.Services.AddSerilog(lc => lc
+	.MinimumLevel.Information()
+	.Enrich.FromLogContext()
+	.Enrich.WithProperty("service", "orchestrator")
+	.WriteTo.Console(new SlogJsonFormatter()));
 
 builder.Services.AddHttpClient("fix-processor", client =>
 {

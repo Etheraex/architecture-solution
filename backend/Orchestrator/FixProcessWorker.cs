@@ -67,6 +67,8 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 				return;
 			}
 
+			using var _ = _logger.BeginScope(new Dictionary<string, object> { ["fixId"] = evt.Id } );
+
 			using var http = _httpClientFactory.CreateClient("fix-processor");
 			using var response = await http.PostAsJsonAsync("/process", evt, _cancellationToken);
 
