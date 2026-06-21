@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
+	"os"
 	"time"
 
 	fixshared "github.com/Etheraex/architecture-solution/fix-backend/fix-shared"
@@ -11,6 +12,12 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})).With("service", "fix-consumer")
+
+	slog.SetDefault(logger)
+
 	client := connectMongo()
 	defer client.Disconnect(context.Background())
 
@@ -23,16 +30,17 @@ func main() {
 	deliveries, err := mqFixIngress.Consume()
 
 	if err != nil {
-		log.Fatalf("RabbitMQ consume: %v", err.Error())
+		slog.Error("RabbitMQ consume failed", "err", err)
+		os.Exit(1)
 	}
 
-	log.Printf("Waiting for messages")
+	slog.Info("Waiting for messages...")
 
 	for d := range deliveries {
 		var newFix fixshared.Fix
 
 		if err := json.Unmarshal(d.Body, &newFix); err != nil {
-			log.Printf("Bad message, dropping: %v", err)
+			slog.Warn("Bad message, dropping", "err", err)
 			d.Nack(false, false)
 			continue
 		}
@@ -43,17 +51,17 @@ func main() {
 
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
-				log.Printf("Duplicate fix %s, acking", newFix.ID)
+				slog.Info("Duplicate fix, acking", "fixId", newFix.ID)
 				d.Ack(false)
 				continue
 			}
 
-			log.Printf("Insert failed, requeueing: %v", err.Error())
+			slog.Error("Insert failed, requeueing", "fixId", newFix.ID, "err", err)
 			d.Nack(false, true)
 			continue
 		}
 
-		log.Printf("Stored fix %s", newFix.ID)
+		slog.Info("Stored fix", "fixId", newFix.ID)
 		d.Ack(false) // inbound message confirmed, fix is persisted
 
 		// TODO: add retry logic for outbound queue publishing
@@ -63,12 +71,12 @@ func main() {
 		})
 
 		if err != nil {
-			log.Printf("Marshalling persisted event failed for %s: %v", newFix.ID, err)
+			slog.Error("Marshalling persisted event failed", "fixId", newFix.ID, "err", err)
 			continue
 		}
 
 		if err := mqFixProcess.Publish(context.Background(), eventBody); err != nil {
-			log.Printf("Publish persisted event failed %s: %v", newFix.ID, err)
+			slog.Error("Publish persisted event failed", "fixId", newFix.ID, "err", err)
 			continue
 		}
 	}

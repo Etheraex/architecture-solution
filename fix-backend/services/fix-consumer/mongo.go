@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -18,7 +18,8 @@ func getMongoURI() string {
 	uri := os.Getenv(mongoURIEnv)
 
 	if uri == "" {
-		log.Fatalf("%s is not set", mongoURIEnv)
+		slog.Error("env var is not set", "name", mongoURIEnv)
+		os.Exit(1)
 	}
 
 	return uri
@@ -28,7 +29,8 @@ func connectMongo() *mongo.Client {
 	client, err := mongo.Connect(options.Client().ApplyURI(getMongoURI()))
 
 	if err != nil {
-		log.Fatalf("Mongo connect: %v", err)
+		slog.Error("Mongo connect failed", "err", err)
+		os.Exit(1)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -36,10 +38,11 @@ func connectMongo() *mongo.Client {
 	defer cancel()
 
 	if err := client.Ping(ctx, nil); err != nil {
-		log.Fatalf("Mongo ping: %v", err)
+		slog.Error("Mongo ping failed", "err", err)
+		os.Exit(1)
 	}
 
-	log.Println("Connected to MongoDB")
+	slog.Info("Connected to MongoDB")
 	fixCollection = client.Database("fix").Collection("fix_messages")
 
 	return client

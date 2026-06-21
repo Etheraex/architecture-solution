@@ -2,7 +2,7 @@ package fixshared
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -15,7 +15,8 @@ func getRabbitMqURI() string {
 	uri := os.Getenv(amqpURIEnv)
 
 	if uri == "" {
-		log.Fatalf("%s is not set", amqpURIEnv)
+		slog.Error("env var not set", "name", amqpURIEnv)
+		os.Exit(1)
 	}
 
 	return uri
@@ -31,22 +32,25 @@ func Connect(queue string) *Client {
 	connection, err := amqp.Dial(getRabbitMqURI())
 
 	if err != nil {
-		log.Fatalf("RabbitMQ dial: %v", err.Error())
+		slog.Error("RabbitMQ dial failed", "err", err)
+		os.Exit(1)
 	}
 
 	channel, err := connection.Channel()
 
 	if err != nil {
-		log.Fatalf("RabbitMQ channel: %v", err.Error())
+		slog.Error("RabbitMQ channel failed", "err", err)
+		os.Exit(1)
 	}
 
 	_, err = channel.QueueDeclare(queue, true, false, false, false, nil)
 
 	if err != nil {
-		log.Fatalf("RabbitMQ queue declare: %v", err.Error())
+		slog.Error("RabbitMQ queue declare failed", "err", err)
+		os.Exit(1)
 	}
 
-	log.Printf("Connected to RabbitMQ, queue %q ready", queue)
+	slog.Info("Connected to RabbitMQ", "queue", queue)
 
 	return &Client{connection: connection, channel: channel, queue: queue}
 }
