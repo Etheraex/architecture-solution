@@ -17,6 +17,22 @@ services:
     networks:
       - fix
 
+  auth-service:
+    build:
+      context: ./auth-service
+    environment:
+      JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - fix
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-token.rule=PathPrefix(`/token`)"
+      - "traefik.http.routers.auth-token.entrypoints=web"
+      - "traefik.http.routers.auth-token.service=auth-service"
+      - "traefik.http.services.auth-service.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.jwt-auth.forwardauth.address=http://auth-service:8080/verify"
+      - "traefik.http.middlewares.jwt-auth.forwardauth.authResponseHeaders=X-Auth-Subject,X-Auth-Roles"
+
   fix-mongodb:
     image: mongo:7
     container_name: fix-mongodb
@@ -72,6 +88,7 @@ services:
       - "traefik.http.routers.fix-ingress.rule=PathPrefix(`/fix`)"
       - "traefik.http.routers.fix-ingress.entrypoints=web"
       - "traefik.http.services.fix-ingress.loadbalancer.server.port=8080"
+      - "traefik.http.routers.fix-ingress.middlewares=jwt-auth"
 
   fix-consumer:
     build:
