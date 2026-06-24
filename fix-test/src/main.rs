@@ -4,6 +4,12 @@ use serde_json::json;
 use std::env;
 use std::thread;
 use std::time::Duration;
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct TokenResponse {
+    token: String,
+}
 
 const TICKERS: &[&str] = &[
     "AAPL", "MSFT", "AMZN", "GOOGL", "META", "NVDA", "TSLA", "NFLX", "JPM", "V",
@@ -32,11 +38,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .nth(1)
         .unwrap_or_else(|| "localhost:8080".to_string());
     let count = env::args().nth(2).and_then(|s| s.parse().ok()).unwrap_or(5);
-    let url = format!("http://{host}/fix");
 
-    println!("Firing {count} FIX messages at {url} (1s interval)...\n");
+    let token_url = format!("http://{host}/token");
+
+    let fix_url = format!("http://{host}/fix");
+
+    println!("Firing {count} FIX messages at {fix_url} (1s interval)...\n");
 
     let client = reqwest::blocking::Client::new();
+
+    let token_response: TokenResponse = client.get(token_url).send()?.json()?;
+    let token = token_response.token;
+
+    println!("Token successfully received: {token}");
+
     let mut rng = rand::rng();
 
     for seq in 1..=count {
@@ -48,7 +63,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let msg = build_fix(seq, symbol, side, qty, price);
 
-        match client.post(&url).json(&json!({"message": msg})).send() {
+        match client.post(&fix_url)
+                .bearer_auth(&token)
+                .json(&json!({"message": msg}))
+                .send() {
             Ok(response) => {
                 let status = response.status();
                 let body = response.text().unwrap_or_default();
