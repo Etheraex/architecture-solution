@@ -44,7 +44,14 @@ func postFix(c *gin.Context, mq *fixshared.Client) {
 		return
 	}
 
-	newFix, err := fixshared.NewFix(inputMsg.Message)
+	user := c.GetHeader("X-Auth-Subject")
+	if user == "" {
+		slog.Warn("Fix upload request is missing X-Auth-Subject header")
+		c.IndentedJSON(http.StatusUnauthorized, gin.H{"error": "Request does not contain X-Auth-Subject header"})
+		return
+	}
+
+	newFix, err := fixshared.NewFix(inputMsg.Message, user)
 
 	if err != nil {
 		slog.Error("Failed to create fix", "err", err)

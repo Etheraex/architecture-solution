@@ -11,10 +11,12 @@ type InputMessage struct {
 }
 
 type Fix struct {
-	ID          string    `json:"id"          bson:"_id"`
-	Timestamp   time.Time `json:"timestamp"   bson:"timestamp"`
-	Message     string    `json:"message"     bson:"message"`
-	IsProcessed bool      `json:"isProcessed" bson:"isProcessed"`
+	ID          string     `json:"id"          bson:"_id"`
+	CreatedAt   time.Time  `json:"createdAt"   bson:"createdAt"`
+	CreatedBy   string     `json:"createdBy"   bson:"createdBy"`
+	Message     string     `json:"message"     bson:"message"`
+	IsProcessed bool       `json:"isProcessed" bson:"isProcessed"`
+	ProcessedAt *time.Time `json:"processedAt" bson:"processedAt"`
 }
 
 type FixPersisted struct {
@@ -22,7 +24,7 @@ type FixPersisted struct {
 	Message string `json:"message"`
 }
 
-func NewFix(message string) (Fix, error) {
+func NewFix(message string, user string) (Fix, error) {
 	id, err := uuid.NewRandom()
 	if err != nil {
 		return Fix{}, err
@@ -30,7 +32,8 @@ func NewFix(message string) (Fix, error) {
 
 	return Fix{
 		ID:        id.String(),
-		Timestamp: time.Now(),
+		CreatedAt: time.Now(),
+		CreatedBy: user,
 		Message:   message,
 	}, nil
 }
