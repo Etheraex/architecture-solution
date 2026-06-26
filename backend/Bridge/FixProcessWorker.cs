@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 
-namespace Orchestrator;
+namespace Bridge;
 
 public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFactory httpClientFactory) : BackgroundService
 {

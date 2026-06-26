@@ -139,10 +139,10 @@ services:
     networks:
       - core
 
-  orchestrator:
+  bridge:
     build:
       context: ./backend
-      dockerfile: Orchestrator/Dockerfile
+      dockerfile: Bridge/Dockerfile
     environment:
       RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@fix-rabbitmq:5672/
       FIXPROCESSOR_URL: http://fix-processor:8080
