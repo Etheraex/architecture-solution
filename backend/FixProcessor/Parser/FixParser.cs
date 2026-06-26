@@ -1,6 +1,6 @@
 using System.Globalization;
-using FixProcessor.Models;
 using FixBackendShared.Models;
+using TradeData.Entities;
 
 namespace FixProcessor.Parser;
 
@@ -10,13 +10,13 @@ public static class FixParser
 	{
 		var f = ParseFields(fixProcessRequest.Message);
 
-		return new Order(
-			OrderId: f.GetValueOrDefault("11") ?? fixProcessRequest.Id,
-			SecurityId: Require(f, "55"),
-			Side: ParseSide(Require(f, "54")),
-			Quantity: ParseDecimal(Require(f, "38"), "38"),
-			Price: ParseDecimal(Require(f, "44"), "44")
-		);
+		return new Order() {
+			OrderId = f.GetValueOrDefault("11") ?? fixProcessRequest.Id,
+			SecurityId = Require(f, "55"),
+			Side = ParseSide(Require(f, "54")),
+			Quantity = ParseDecimal(Require(f, "38"), "38"),
+			Price = ParseDecimal(Require(f, "44"), "44")
+		};
 	}
 
 	private static Dictionary<string, string> ParseFields(string fix)

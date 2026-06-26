@@ -4,12 +4,14 @@ using System.Text.Json;
 using FixBackendShared.Models;
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
 
 namespace Orchestrator;
 
 public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFactory httpClientFactory) : BackgroundService
 {
-	private const string QueueName = "fix_messages_process";
+	private const string ProcessRequestQueueName = "fix_messages_process";
+	private const string ProcessConfirmationQueueName = "fix_messages_confirmation";
 
 	private static readonly JsonSerializerOptions JsonOptions = new()
 	{
@@ -33,10 +35,24 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 		var factory = new ConnectionFactory { Uri = new Uri(uri) };
 
 		_connection = await factory.CreateConnectionAsync(cancellationToken);
-		_channel = await _connection.CreateChannelAsync(cancellationToken: cancellationToken);
+		_channel = await _connection.CreateChannelAsync(
+			new CreateChannelOptions(
+				publisherConfirmationsEnabled: true,
+				publisherConfirmationTrackingEnabled: true
+			),
+			cancellationToken: cancellationToken);
 
 		await _channel.QueueDeclareAsync(
-			queue: QueueName,
+			queue: ProcessRequestQueueName,
+			durable: true,
+			exclusive: false,
+			autoDelete: false,
+			arguments: null,
+			cancellationToken: cancellationToken
+		);
+
+		await _channel.QueueDeclareAsync(
+			queue: ProcessConfirmationQueueName,
 			durable: true,
 			exclusive: false,
 			autoDelete: false,
@@ -49,9 +65,9 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 		var consumer = new AsyncEventingBasicConsumer(_channel);
 		consumer.ReceivedAsync += OnReceivedAsync;
 
-		await _channel.BasicConsumeAsync(QueueName, autoAck: false, consumer, cancellationToken);
+		await _channel.BasicConsumeAsync(ProcessRequestQueueName, autoAck: false, consumer, cancellationToken);
 
-		_logger.LogInformation("Waiting for fix persisted events on {Queue}", QueueName);
+		_logger.LogInformation("Waiting for fix persisted events on {Queue}", ProcessRequestQueueName);
 	}
 
 	private async Task OnReceivedAsync(object sender, BasicDeliverEventArgs args)
@@ -80,6 +96,16 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 			}
 
 			response.EnsureSuccessStatusCode();
+
+			var processedId = await response.Content.ReadAsStringAsync(_cancellationToken);
+
+			await _channel!.BasicPublishAsync(
+				exchange: string.Empty,
+				routingKey: ProcessConfirmationQueueName,
+				mandatory: false,
+				basicProperties: new BasicProperties { Persistent = true },
+				body: Encoding.UTF8.GetBytes(processedId),
+				cancellationToken: _cancellationToken);
 
 			_logger.LogInformation("Fix {Id} processed", evt.Id);
 

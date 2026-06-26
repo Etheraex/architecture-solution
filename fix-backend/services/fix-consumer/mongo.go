@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -46,4 +47,20 @@ func connectMongo() *mongo.Client {
 	fixCollection = client.Database("fix").Collection("fix_messages")
 
 	return client
+}
+
+func markFixProcessed(ctx context.Context, id string) (int64, error) {
+	now := time.Now()
+
+	res, err := fixCollection.UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$set": bson.M{"isProcessed": true, "processedAt": now}},
+	)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return res.MatchedCount, nil
 }

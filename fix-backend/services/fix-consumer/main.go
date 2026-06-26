@@ -27,6 +27,56 @@ func main() {
 	mqFixProcess := fixshared.Connect("fix_messages_process")
 	defer mqFixProcess.Close()
 
+	mqFixProcessConfirmation := fixshared.Connect("fix_messages_confirmation")
+	defer mqFixProcessConfirmation.Close()
+
+	go consumeConfirmations(mqFixProcessConfirmation)
+
+	consumeIngress(mqFixIngress, mqFixProcess)
+}
+
+func consumeConfirmations(mq *fixshared.Client) {
+	deliveries, err := mq.Consume()
+
+	if err != nil {
+		slog.Error("RabbitMQ consume failed", "queue", "fix_messages_confirmation", "err", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Waiting for confirmations...")
+
+	for d := range deliveries {
+		fixID := string(d.Body)
+
+		if fixID == "" {
+			slog.Warn("Empty confirmation, dropping")
+			d.Nack(false, false)
+			continue
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		matched, err := markFixProcessed(ctx, fixID)
+		cancel()
+
+		if err != nil {
+			slog.Error("Mark processed failed, requeueing", "fixId", fixID, "err", err)
+			d.Nack(false, true)
+			continue
+		}
+
+		if matched == 0 {
+			slog.Warn("Confirmation for unknown fix, dropping", "fixId", fixID)
+			d.Nack(false, false)
+			continue
+		}
+
+		slog.Info("Fix marked processed", "fixId", fixID)
+
+		d.Ack(false)
+	}
+}
+
+func consumeIngress(mqFixIngress *fixshared.Client, mqFixProcess *fixshared.Client) {
 	deliveries, err := mqFixIngress.Consume()
 
 	if err != nil {
