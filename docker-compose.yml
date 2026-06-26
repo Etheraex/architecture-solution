@@ -128,7 +128,7 @@ services:
 
   fix-processor:
     build:
-      context: ./backend
+      context: ./core-backend
       dockerfile: FixProcessor/Dockerfile
     environment:
       ASPNETCORE_HTTP_PORTS: "8080"
@@ -141,7 +141,7 @@ services:
 
   bridge:
     build:
-      context: ./backend
+      context: ./core-backend
       dockerfile: Bridge/Dockerfile
     environment:
       RABBITMQ_URI: amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@fix-rabbitmq:5672/
