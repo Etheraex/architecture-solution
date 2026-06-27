@@ -26,7 +26,7 @@ services:
       - fix
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.auth-token.rule=PathPrefix(`/token`)"
+      - "traefik.http.routers.auth-token.rule=PathPrefix(`/token`) || PathPrefix(`/verify`)"
       - "traefik.http.routers.auth-token.entrypoints=web"
       - "traefik.http.routers.auth-token.service=auth-service"
       - "traefik.http.services.auth-service.loadbalancer.server.port=8080"
