@@ -34,7 +34,7 @@ vendor/
 .env
 
 # Rust workspace files
-/fix-test/target
+/tests/target
 
 # C# build output
 **/obj
