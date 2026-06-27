@@ -47,7 +47,7 @@ a separate network and out of the request path.
 
 ## Testing
 
-Testing currently centers on `fix-test/`, a Rust load/smoke script that drives the
+Testing currently centers on `tests/`, a Rust load/smoke script that drives the
 full ingestion path end to end: it authenticates against `auth-service` for a token,
 then generates synthetic FIX messages and posts them through Traefik to `fix-ingress`
 under that token. More tests are planned, starting with focused coverage of the
@@ -61,6 +61,6 @@ under that token. More tests are planned, starting with focused coverage of the
 | `core-backend/` | .NET services: `Bridge`, `FixProcessor`, `TradeData` (EF Core / MSSQL), shared models |
 | `auth-service/` | Go token issuer + forward-auth verifier |
 | `observability/` | Alloy, Loki, Grafana config |
-| `fix-test/` | Rust load/smoke test driving the ingestion path end to end |
+| `tests/` | Rust load/smoke test driving the ingestion path end to end |
 | `docs/adr/` | Architecture decision records |
 | `docker-compose.yml` | Local orchestration of the whole stack |
