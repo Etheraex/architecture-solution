@@ -37,7 +37,7 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 		_connection = await factory.CreateConnectionAsync(cancellationToken);
 		_channel = await _connection.CreateChannelAsync(
 			new CreateChannelOptions(
-				publisherConfirmationsEnabled: true,
+				publisherConfirmationsEnabled: true, // We want to make sure BasicPublishAsync message is received by the broker, if not throw from BasicPublishAsync, NACK and retry
 				publisherConfirmationTrackingEnabled: true
 			),
 			cancellationToken: cancellationToken);
@@ -102,7 +102,7 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 			await _channel!.BasicPublishAsync(
 				exchange: string.Empty,
 				routingKey: ProcessConfirmationQueueName,
-				mandatory: false,
+				mandatory: true, // We want to make sure messages from BasicPublishAsync are routable when sending, if not throw from BasicPublishAsync, NACK and try again
 				basicProperties: new BasicProperties { Persistent = true },
 				body: Encoding.UTF8.GetBytes(processedId),
 				cancellationToken: _cancellationToken);

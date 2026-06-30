@@ -54,7 +54,7 @@ func markFixProcessed(ctx context.Context, id string) (int64, error) {
 
 	res, err := fixCollection.UpdateOne(
 		ctx,
-		bson.M{"_id": id},
+		bson.M{"_id": id, "isProcessed": false},
 		bson.M{"$set": bson.M{"isProcessed": true, "processedAt": now}},
 	)
 

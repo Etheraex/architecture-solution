@@ -2,6 +2,7 @@ package fixshared
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -26,6 +27,7 @@ type Client struct {
 	connection *amqp.Connection
 	channel    *amqp.Channel
 	queue      string
+	returns    <-chan amqp.Return
 }
 
 func Connect(queue string) *Client {
@@ -43,6 +45,14 @@ func Connect(queue string) *Client {
 		os.Exit(1)
 	}
 
+	// Confirm broker received messages
+	if err := channel.Confirm(false); err != nil {
+		slog.Error("RabbitMQ confirm mode failed", "err", err)
+		os.Exit(1)
+	}
+
+	returns := channel.NotifyReturn(make(chan amqp.Return, 1))
+
 	_, err = channel.QueueDeclare(queue, true, false, false, false, nil)
 
 	if err != nil {
@@ -52,7 +62,7 @@ func Connect(queue string) *Client {
 
 	slog.Info("Connected to RabbitMQ", "queue", queue)
 
-	return &Client{connection: connection, channel: channel, queue: queue}
+	return &Client{connection: connection, channel: channel, queue: queue, returns: returns}
 }
 
 func (c *Client) Close() {
@@ -66,12 +76,39 @@ func (c *Client) Close() {
 }
 
 func (c *Client) Publish(ctx context.Context, body []byte) error {
-	return c.channel.PublishWithContext(ctx, "", c.queue, false, false, amqp.Publishing{
-		ContentType:  "application/json",
-		DeliveryMode: amqp.Persistent,
-		Timestamp:    time.Now(),
-		Body:         body,
-	})
+	// Specific publish method which actually uses the confirm mode activated when creating the channel
+	conf, err := c.channel.PublishWithDeferredConfirmWithContext(
+		ctx,
+		"",
+		c.queue,
+		true, /* mandatory flag */
+		false,
+		amqp.Publishing{
+			ContentType:  "application/json",
+			DeliveryMode: amqp.Persistent,
+			Timestamp:    time.Now(),
+			Body:         body,
+		})
+
+	if err != nil {
+		return err
+	}
+
+	ok, err := conf.WaitContext(ctx)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("Publish nacked by broker, queue %q", c.queue)
+	}
+
+	select {
+	case <-c.returns:
+		return fmt.Errorf("Message unroutable, queue %q", c.queue)
+	default:
+	}
+
+	return nil
 }
 
 func (c *Client) Consume() (<-chan amqp.Delivery, error) {

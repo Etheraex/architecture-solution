@@ -65,7 +65,7 @@ func consumeConfirmations(mq *fixshared.Client) {
 		}
 
 		if matched == 0 {
-			slog.Warn("Confirmation for unknown fix, dropping", "fixId", fixID)
+			slog.Warn("Confirmation is a no-op, nacking", "fixId", fixID)
 			d.Nack(false, false)
 			continue
 		}
@@ -101,33 +101,36 @@ func consumeIngress(mqFixIngress *fixshared.Client, mqFixProcess *fixshared.Clie
 
 		if err != nil {
 			if mongo.IsDuplicateKeyError(err) {
-				slog.Info("Duplicate fix, acking", "fixId", newFix.ID)
-				d.Ack(false)
+				slog.Info("Duplicate fix, treating as persisted", "fixId", newFix.ID)
+			} else {
+				slog.Error("Insert failed, requeueing", "fixId", newFix.ID, "err", err)
+				d.Nack(false, true)
 				continue
 			}
-
-			slog.Error("Insert failed, requeueing", "fixId", newFix.ID, "err", err)
-			d.Nack(false, true)
-			continue
+		} else {
+			slog.Info("Stored fix", "fixId", newFix.ID)
 		}
 
-		slog.Info("Stored fix", "fixId", newFix.ID)
-		d.Ack(false) // inbound message confirmed, fix is persisted
-
-		// TODO: add retry logic for outbound queue publishing
 		eventBody, err := json.Marshal(fixshared.FixPersisted{
 			ID:      newFix.ID,
 			Message: newFix.Message,
 		})
 
 		if err != nil {
-			slog.Error("Marshalling persisted event failed", "fixId", newFix.ID, "err", err)
+			slog.Error("Marshall failed, dropping", "fixId", newFix.ID, "err", err)
+			d.Nack(false, false)
 			continue
 		}
 
-		if err := mqFixProcess.Publish(context.Background(), eventBody); err != nil {
+		ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+		if err := mqFixProcess.Publish(ctx, eventBody); err != nil {
+			cancel()
 			slog.Error("Publish persisted event failed", "fixId", newFix.ID, "err", err)
+			d.Nack(false, true)
 			continue
 		}
+		cancel()
+
+		d.Ack(false) //inbound message confirmed, fix is persisted only after it has been successfully published for processing
 	}
 }
