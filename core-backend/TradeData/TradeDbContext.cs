@@ -64,7 +64,6 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 
 		modelBuilder.Entity<Security>(e =>
 		{
-			e.HasIndex(o => o.Id);
 			e.Property(o => o.Ticker).HasMaxLength(50);
 			e.Property(o => o.Description).HasMaxLength(100);
 
@@ -78,7 +77,6 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 
 		modelBuilder.Entity<StrategyEntity>(e =>
 		{
-			e.HasIndex(o => o.Id);
 			e.Property(o => o.Code).HasMaxLength(20);
 			e.Property(o => o.Description).HasMaxLength(100);
 			e.HasData(new StrategyEntity() { Id = 1, Code = "*None*", Description = "System Default Strategy"});
@@ -86,7 +84,6 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 
 		modelBuilder.Entity<ManagerEntity>(e =>
 		{
-			e.HasIndex(o => o.Id);
 			e.Property(o => o.Code).HasMaxLength(20);
 			e.Property(o => o.Description).HasMaxLength(100);
 			e.HasData(new ManagerEntity() { Id = 1, Code = "*None*", Description = "System Default Manager"});
@@ -94,7 +91,6 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 
 		modelBuilder.Entity<FundEntity>(e =>
 		{
-			e.HasIndex(o => o.Id);
 			e.Property(o => o.Code).HasMaxLength(20);
 			e.Property(o => o.Description).HasMaxLength(100);
 			e.HasData(new FundEntity() { Id = 1, Code = "*None*", Description = "System Default Fund"});
@@ -102,7 +98,6 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 
 		modelBuilder.Entity<BrokerEntity>(e =>
 		{
-			e.HasIndex(o => o.Id);
 			e.Property(o => o.Code).HasMaxLength(20);
 			e.Property(o => o.Description).HasMaxLength(100);
 			e.HasData(new BrokerEntity() { Id = 1, Code = "*None*", Description = "System Default Broker"});
@@ -110,7 +105,6 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 
 		modelBuilder.Entity<ExchangeEntity>(e =>
 		{
-			e.HasIndex(o => o.Id);
 			e.Property(o => o.Code).HasMaxLength(20);
 			e.Property(o => o.Description).HasMaxLength(100);
 			e.HasData(new ExchangeEntity() { Id = 1, Code = "*None*", Description = "System Default Exchange"});
