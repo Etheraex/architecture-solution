@@ -3,7 +3,9 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # copy csprojs first for cached restore
+COPY FixBackendShared/FixBackendShared.csproj FixBackendShared/
 COPY OrderService/OrderService.csproj OrderService/
+COPY TradeData/TradeData.csproj TradeData/
 RUN dotnet restore OrderService/OrderService.csproj
 
 COPY . .

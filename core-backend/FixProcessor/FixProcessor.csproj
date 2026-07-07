@@ -8,13 +8,13 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.8" />
-    <ProjectReference Include="..\FixBackendShared\FixBackendShared.csproj" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.9" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\FixBackendShared\FixBackendShared.csproj" />
     <ProjectReference Include="..\TradeData\TradeData.csproj" />
   </ItemGroup>
 

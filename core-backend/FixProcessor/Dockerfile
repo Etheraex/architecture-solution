@@ -5,6 +5,7 @@ WORKDIR /src
 # copy csprojs first for cached restore
 COPY FixBackendShared/FixBackendShared.csproj FixBackendShared/
 COPY FixProcessor/FixProcessor.csproj FixProcessor/
+COPY TradeData/TradeData.csproj TradeData/
 RUN dotnet restore FixProcessor/FixProcessor.csproj
 
 COPY . .
