@@ -1,14 +1,13 @@
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text.Json;
-using FixBackendShared.Models;
-using System.Net;
-using System.Net.Http.Json;
 using System.Text;
+using FixBackendShared.Grpc;
+using Grpc.Core;
 
 namespace Bridge;
 
-public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFactory httpClientFactory) : BackgroundService
+public class FixProcessWorker(ILogger<FixProcessWorker> logger, FixProcessing.FixProcessingClient fixProcessingClient) : BackgroundService
 {
 	private const string ProcessRequestQueueName = "fix_messages_process";
 	private const string ProcessConfirmationQueueName = "fix_messages_confirmation";
@@ -19,7 +18,7 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 	};
 
 	private readonly ILogger<FixProcessWorker> _logger = logger;
-	private readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
+	private readonly FixProcessing.FixProcessingClient fixProcessingClient = fixProcessingClient;
 	private CancellationToken _cancellationToken;
 
 	private IConnection? _connection;
@@ -85,26 +84,14 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 
 			using var _ = _logger.BeginScope(new Dictionary<string, object> { ["fixId"] = evt.Id } );
 
-			using var http = _httpClientFactory.CreateClient("fix-processor");
-			using var response = await http.PostAsJsonAsync("/process", evt, _cancellationToken);
-
-			if (response.StatusCode == HttpStatusCode.UnprocessableContent)
-			{
-				_logger.LogWarning("Fix {Id} rejected as unprocessable, dropping", evt.Id);
-				await _channel!.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: false);
-				return;
-			}
-
-			response.EnsureSuccessStatusCode();
-
-			var processedId = await response.Content.ReadAsStringAsync(_cancellationToken);
+			var resp = await fixProcessingClient.ProcessAsync(evt, cancellationToken: _cancellationToken);
 
 			await _channel!.BasicPublishAsync(
 				exchange: string.Empty,
 				routingKey: ProcessConfirmationQueueName,
 				mandatory: true, // We want to make sure messages from BasicPublishAsync are routable when sending, if not throw from BasicPublishAsync, NACK and try again
 				basicProperties: new BasicProperties { Persistent = true },
-				body: Encoding.UTF8.GetBytes(processedId),
+				body: Encoding.UTF8.GetBytes(evt.Id),
 				cancellationToken: _cancellationToken);
 
 			_logger.LogInformation("Fix {Id} processed", evt.Id);
@@ -115,6 +102,11 @@ public class FixProcessWorker(ILogger<FixProcessWorker> logger, IHttpClientFacto
 		{
 			// In case of malformed json which might cause a poison loop
 			_logger.LogError(je, "Malformed message, dropping");
+			await _channel!.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: false);
+		}
+		catch (RpcException rpc) when (rpc.StatusCode is StatusCode.NotFound or StatusCode.InvalidArgument)
+		{
+			_logger.LogError(rpc, "Server rejected as unprocessable, dropping");
 			await _channel!.BasicNackAsync(args.DeliveryTag, multiple: false, requeue: false);
 		}
 		catch (Exception e)

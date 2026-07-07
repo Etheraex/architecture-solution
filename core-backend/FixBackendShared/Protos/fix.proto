@@ -1,0 +1,12 @@
+syntax = "proto3";
+option csharp_namespace = "FixBackendShared.Grpc";
+package fix;
+
+service FixProcessing {
+    rpc Process (FixProcessRequest) returns (FixProcessResponse);
+}
+message FixProcessRequest {
+    string id        = 1;
+    string message   = 2;
+}
+message FixProcessResponse { bool already_existed = 1; }

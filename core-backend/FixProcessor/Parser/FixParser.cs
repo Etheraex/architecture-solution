@@ -1,6 +1,5 @@
 using System.Globalization;
 using FixBackendShared.Grpc;
-using FixBackendShared.Models;
 
 namespace FixProcessor.Parser;
 
