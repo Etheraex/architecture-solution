@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TradeData;
 
@@ -10,9 +11,11 @@ using TradeData;
 namespace TradeData.Migrations
 {
     [DbContext(typeof(TradeDbContext))]
-    partial class TradeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260707191740_SeedSecuritiesAndExchanges")]
+    partial class SeedSecuritiesAndExchanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -189,6 +192,9 @@ namespace TradeData.Migrations
                     b.Property<int>("SecurityId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SecurityId1")
+                        .HasColumnType("int");
+
                     b.Property<int>("Side")
                         .HasColumnType("int");
 
@@ -207,6 +213,8 @@ namespace TradeData.Migrations
                         .IsUnique();
 
                     b.HasIndex("SecurityId");
+
+                    b.HasIndex("SecurityId1");
 
                     b.HasIndex("Side");
 
@@ -402,10 +410,14 @@ namespace TradeData.Migrations
                         .IsRequired();
 
                     b.HasOne("TradeData.Entities.Security", "Security")
-                        .WithMany("Orders")
+                        .WithMany()
                         .HasForeignKey("SecurityId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("TradeData.Entities.Security", null)
+                        .WithMany("Orders")
+                        .HasForeignKey("SecurityId1");
 
                     b.HasOne("TradeData.Entities.OrderSideLookup", "SideType")
                         .WithMany()

@@ -1,10 +1,9 @@
+using Serilog;
 using FixProcessor.Parser;
 using FixBackendShared.Models;
 using FixBackendShared.Logging;
-using Serilog;
-using Microsoft.EntityFrameworkCore;
-using TradeData;
-using TradeData.Entities;
+using FixBackendShared.Grpc;
+using Grpc.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,19 +15,13 @@ builder.Services.AddSerilog(lc => lc
 	.Enrich.WithProperty("service", "fix-processor")
 	.WriteTo.Console(new SlogJsonFormatter()));
 
-builder.Services.AddDbContext<TradeDbContext>(options => 
-	options.UseSqlServer(
-		Environment.GetEnvironmentVariable("TRADE_DB_CONNECTION")
-			?? throw new InvalidOperationException("TRADE_DB_CONNECTION environment variable is not set."),
-		sql => sql.EnableRetryOnFailure()));
+builder.Services.AddGrpcClient<OrderPersistence.OrderPersistenceClient>(options =>
+	options.Address = new Uri(
+		Environment.GetEnvironmentVariable("ORDERSERVICE_URL")
+			?? throw new InvalidOperationException("ORDERSERVICE_URL environment variable is not set.")
+	));
 
 var app = builder.Build();
-
-using (var scope = app.Services.CreateScope())
-{
-	var db = scope.ServiceProvider.GetRequiredService<TradeDbContext>();
-	db.Database.Migrate();
-}
 
 app.UseSerilogRequestLogging(options =>
 {
@@ -45,17 +38,17 @@ app.Logger.LogInformation("fix-processor started");
 
 app.MapPost("/process", async (
 	FixProcessRequest request,
-	TradeDbContext db,
+	OrderPersistence.OrderPersistenceClient orderClient,
 	ILogger<Program> logger,
 	CancellationToken cancellationToken) =>
 {
 	using var _ = logger.BeginScope(new Dictionary<string, object> { ["fixId"] = request.Id });
 
-	Order order;
+	PersistOrderRequest orderRequest;
 
 	try
 	{
-		order = FixParser.ToOrder(request);
+		orderRequest = FixParser.ToPersistRequest(request);
 	}
 	catch (FormatException fe)
 	{
@@ -63,23 +56,22 @@ app.MapPost("/process", async (
 		return Results.UnprocessableEntity(new { request.Id, error = fe.Message });
 	}
 
-	db.Orders.Add(order);
-
 	try
 	{
-		await db.SaveChangesAsync(cancellationToken);
-		logger.LogInformation("Persisted order {OrderId}", order.OrderId);
+		var response = await orderClient.PersistAsync(orderRequest, cancellationToken: cancellationToken);
+		logger.LogInformation(
+			response.AlreadyExisted
+				? "Order {OrderId} already persisted, treating as success"
+				: "Persisted order {OrderId}",
+			orderRequest.OrderId);
 	}
-	catch (DbUpdateException dbe) when (IsUniqueValidation(dbe))
+	catch (RpcException rpc) when (rpc.StatusCode is StatusCode.NotFound or StatusCode.InvalidArgument)
 	{
-		logger.LogInformation("Order {OrderId} already persisted, treating as success", order.OrderId);
+		logger.LogWarning("Order {OrderId} rejected: {Detail}", orderRequest.OrderId, rpc.Status.Detail);
+		return Results.UnprocessableEntity(new { request.Id, error = rpc.Status.Detail });
 	}
 
 	return Results.Text(request.Id);
 });
-
-// (2601 = unique index violation, 2627 = unique constraint — OrderId index throws one of these.)
-static bool IsUniqueValidation(DbUpdateException dbe)
-	=> dbe.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 };
 
 app.Run();

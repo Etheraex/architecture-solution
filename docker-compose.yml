@@ -132,10 +132,10 @@ services:
       dockerfile: FixProcessor/Dockerfile
     environment:
       ASPNETCORE_HTTP_PORTS: "8080"
-      TRADE_DB_CONNECTION: "Server=trade-mssql,1433;Database=TradeDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      ORDERSERVICE_URL: "http://order-service:8080"
     depends_on:
-      trade-mssql:
-        condition: service_healthy
+      order-service:
+        condition: service_started
     networks:
       - core
 
@@ -178,18 +178,18 @@ services:
     networks:
       - core
 
-  rest-api-service:
-    build:
-      context: ./core-backend
-      dockerfile: RestApiService/Dockerfile
-    environment:
-      ASPNETCORE_HTTP_PORTS: "8080"
-      TRADE_DB_CONNECTION: "Server=trade-mssql,1433;Database=TradeDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
-    depends_on:
-      trade-mssql:
-        condition: service_healthy
-    networks:
-      - core
+  # rest-api-service:
+  #   build:
+  #     context: ./core-backend
+  #     dockerfile: RestApiService/Dockerfile
+  #   environment:
+  #     ASPNETCORE_HTTP_PORTS: "8080"
+  #     TRADE_DB_CONNECTION: "Server=trade-mssql,1433;Database=TradeDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+  #   depends_on:
+  #     trade-mssql:
+  #       condition: service_healthy
+  #   networks:
+  #     - core
 
   security-service:
     build:

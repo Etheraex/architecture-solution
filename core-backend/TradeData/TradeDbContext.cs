@@ -57,13 +57,14 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 				.OnDelete(DeleteBehavior.Restrict);
 
 			e.HasOne(o => o.Security)
-				.WithMany()
+				.WithMany(s => s.Orders)
 				.HasForeignKey(o => o.SecurityId)
 				.OnDelete(DeleteBehavior.Restrict);
 		});
 
 		modelBuilder.Entity<Security>(e =>
 		{
+			e.HasIndex(o => o.Ticker).IsUnique();
 			e.Property(o => o.Ticker).HasMaxLength(50);
 			e.Property(o => o.Description).HasMaxLength(100);
 
@@ -71,6 +72,19 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 				.WithMany()
 				.HasForeignKey(o => o.ExchangeId)
 				.OnDelete(DeleteBehavior.Restrict);
+
+			e.HasData(
+				new Security { Id = 1,  Ticker = "AAPL",  Description = "Apple Inc.",           ExchangeId = 2 },
+				new Security { Id = 2,  Ticker = "MSFT",  Description = "Microsoft Corp.",      ExchangeId = 2 },
+				new Security { Id = 3,  Ticker = "AMZN",  Description = "Amazon.com Inc.",      ExchangeId = 2 },
+				new Security { Id = 4,  Ticker = "GOOGL", Description = "Alphabet Inc.",        ExchangeId = 2 },
+				new Security { Id = 5,  Ticker = "META",  Description = "Meta Platforms Inc.",  ExchangeId = 2 },
+				new Security { Id = 6,  Ticker = "NVDA",  Description = "NVIDIA Corp.",         ExchangeId = 2 },
+				new Security { Id = 7,  Ticker = "TSLA",  Description = "Tesla Inc.",           ExchangeId = 2 },
+				new Security { Id = 8,  Ticker = "NFLX",  Description = "Netflix Inc.",         ExchangeId = 2 },
+				new Security { Id = 9,  Ticker = "JPM",   Description = "JPMorgan Chase & Co.", ExchangeId = 3 },
+				new Security { Id = 10, Ticker = "V",     Description = "Visa Inc.",            ExchangeId = 3 }
+			);
 		});
 
 		#region Configuration Entities
@@ -107,7 +121,10 @@ public class TradeDbContext(DbContextOptions<TradeDbContext> options) : DbContex
 		{
 			e.Property(o => o.Code).HasMaxLength(20);
 			e.Property(o => o.Description).HasMaxLength(100);
-			e.HasData(new ExchangeEntity() { Id = 1, Code = "*None*", Description = "System Default Exchange"});
+			e.HasData(
+				new ExchangeEntity() { Id = 1, Code = "*None*", Description = "System Default Exchange"},
+				new ExchangeEntity() { Id = 2, Code = "NASDAQ", Description = "Nasdaq Stock Market" },
+				new ExchangeEntity() { Id = 3, Code = "NYSE",   Description = "New York Stock Exchange" });
 		});
 
 		#endregion

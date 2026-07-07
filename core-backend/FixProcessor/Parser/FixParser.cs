@@ -1,21 +1,21 @@
 using System.Globalization;
+using FixBackendShared.Grpc;
 using FixBackendShared.Models;
-using TradeData.Entities;
 
 namespace FixProcessor.Parser;
 
 public static class FixParser
 {
-	public static Order ToOrder(FixProcessRequest fixProcessRequest)
+	public static PersistOrderRequest ToPersistRequest(FixProcessRequest fixProcessRequest)
 	{
 		var f = ParseFields(fixProcessRequest.Message);
 
-		return new Order() {
+		return new PersistOrderRequest() {
 			OrderId = f.GetValueOrDefault("11") ?? fixProcessRequest.Id,
-			SecurityId = Require(f, "55"),
+			Symbol = Require(f, "55"),
 			Side = ParseSide(Require(f, "54")),
-			Quantity = ParseDecimal(Require(f, "38"), "38"),
-			Price = ParseDecimal(Require(f, "44"), "44")
+			Quantity = NormalizeDecimal(Require(f, "38"), "38"),
+			Price = NormalizeDecimal(Require(f, "44"), "44")
 		};
 	}
 
@@ -37,15 +37,15 @@ public static class FixParser
 			? v
 			: throw new FormatException($"FIX missing required tag {tag}");
 
-	private static OrderSide ParseSide(string v) => v switch
+	private static Side ParseSide(string v) => v switch
 	{
-		"1" => OrderSide.Buy,
-		"2" => OrderSide.Sell,
+		"1" => Side.Buy,
+		"2" => Side.Sell,
 		_ => throw new FormatException($"Unsupported FIX side '{v}'")
 	};
 
-	private static decimal ParseDecimal(string v, string tag)
+	private static string NormalizeDecimal(string v, string tag)
 		=> decimal.TryParse(v, NumberStyles.Number, CultureInfo.InvariantCulture, out var d)
-			? d
+			? d.ToString(CultureInfo.InvariantCulture)
 			: throw new FormatException($"FIX tag {tag}, not a number: '{v}'");
 }

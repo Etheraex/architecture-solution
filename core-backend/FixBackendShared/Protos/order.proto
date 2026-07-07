@@ -1,0 +1,16 @@
+syntax = "proto3";
+option csharp_namespace = "FixBackendShared.Grpc";
+package order;
+
+service OrderPersistence {
+    rpc Persist (PersistOrderRequest) returns (PersistOrderResponse);
+}
+message PersistOrderRequest {
+    string order_id = 1;
+    string symbol   = 2;
+    Side side     = 3;
+    string quantity = 4;
+    string price    = 5;
+}
+message PersistOrderResponse { bool already_existed = 1; }
+enum Side { SIDE_NONE = 0; BUY = 1; SELL = 2; }
