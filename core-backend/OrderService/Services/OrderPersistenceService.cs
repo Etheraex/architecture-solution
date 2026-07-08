@@ -4,6 +4,7 @@ using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
 using TradeData;
 using TradeData.Entities;
+using ProtoOrder = FixBackendShared.Grpc.Order;
 
 namespace OrderService.Services;
 
@@ -34,7 +35,7 @@ public class OrderPersistenceService : OrderPersistence.OrderPersistenceBase
 			throw new RpcException(new Status(StatusCode.NotFound, $"Unknown security ticker '{request.Symbol}'"));
 		}
 
-		var order = new Order
+		var order = new TradeData.Entities.Order
 		{
 			OrderId = request.OrderId,
 			SecurityId = security.Id,
@@ -61,6 +62,53 @@ public class OrderPersistenceService : OrderPersistence.OrderPersistenceBase
 			return new PersistOrderResponse { AlreadyExisted = true };
 		}
 	}
+
+	public override async Task<GetAllOrdersResponse> GetAllOrders(GetAllOrdersRequest request, ServerCallContext context)
+	{
+		var orders = await dbContext.Orders
+			.Include(o => o.Security)
+			.AsNoTracking()
+			.OrderBy(o => o.Id)
+			.ToListAsync(context.CancellationToken);
+		
+		var response = new GetAllOrdersResponse();
+		response.Orders.AddRange(orders.Select(MapToProto));
+
+		return response;
+	}
+
+	public override async Task<ProtoOrder> GetOrderById(GetOrderByIdRequest request, ServerCallContext context)
+	{
+		var order = await dbContext.Orders
+			.Include(o => o.Security)
+			.AsNoTracking()
+			.FirstOrDefaultAsync(o => o.Id == request.Id, context.CancellationToken);
+
+		if (order is null)
+		{
+			logger.LogWarning("Order {Id} not found", request.Id);
+			throw new RpcException(new Status(StatusCode.NotFound, $"Order '{request.Id}' not found"));
+		}
+
+		return MapToProto(order);
+	}
+
+	private static ProtoOrder MapToProto(TradeData.Entities.Order order) => new()
+	{
+		Id       = order.Id,
+		OrderId  = order.OrderId,
+		Symbol   = order.Security.Ticker,
+		Side     = ToProtoSide(order.Side),
+		Quantity = order.Quantity.ToString(CultureInfo.InvariantCulture),
+		Price    = order.Price.ToString(CultureInfo.InvariantCulture),
+	};
+
+	private static Side ToProtoSide(OrderSide side) => side switch
+	{
+		OrderSide.Buy  => Side.Buy,
+		OrderSide.Sell => Side.Sell,
+		_              => Side.None,
+	};
 
 	private static OrderSide MapSide(Side side) => side switch
 	{

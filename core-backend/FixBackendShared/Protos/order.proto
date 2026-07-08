@@ -4,6 +4,8 @@ package order;
 
 service OrderPersistence {
     rpc Persist (PersistOrderRequest) returns (PersistOrderResponse);
+    rpc GetAllOrders (GetAllOrdersRequest) returns (GetAllOrdersResponse);
+    rpc GetOrderById (GetOrderByIdRequest) returns (Order);
 }
 message PersistOrderRequest {
     string order_id = 1;
@@ -13,4 +15,18 @@ message PersistOrderRequest {
     string price    = 5;
 }
 message PersistOrderResponse { bool already_existed = 1; }
+
+message GetAllOrdersRequest { }
+message GetAllOrdersResponse { repeated Order orders = 1; }
+
+message GetOrderByIdRequest { int32 id = 1; }
+message Order {
+    int32 id       = 1;
+    string order_id = 2;
+    string symbol   = 3;
+    Side side       = 4;
+    string quantity = 5;
+    string price    = 6;
+}
+
 enum Side { SIDE_NONE = 0; BUY = 1; SELL = 2; }

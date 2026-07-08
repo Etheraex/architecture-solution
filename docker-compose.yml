@@ -15,7 +15,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
-      - fix
+      - edge
 
   auth-service:
     build:
@@ -23,7 +23,7 @@ services:
     environment:
       JWT_SECRET: ${JWT_SECRET}
     networks:
-      - fix
+      - edge
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.auth-token.rule=PathPrefix(`/token`) || PathPrefix(`/verify`)"
@@ -51,6 +51,7 @@ services:
       retries: 5
     networks:
       - fix
+      - edge # needs external network to connect Compass UI
 
   trade-mssql:
     image: mcr.microsoft.com/mssql/server:2022-latest
@@ -72,6 +73,7 @@ services:
       start_period: 30s
     networks:
       - core
+      - edge # needs external network to connect mssql client
 
   fix-rabbitmq:
     image: rabbitmq:4-management
@@ -87,6 +89,7 @@ services:
       - fix-rabbitmq-data:/var/lib/rabbitmq
     networks:
       - fix
+      - edge # needs external network for management UI only
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -104,6 +107,7 @@ services:
         condition: service_healthy
     networks:
       - fix
+      - edge
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.fix-ingress.rule=PathPrefix(`/fix`)"
@@ -178,18 +182,21 @@ services:
     networks:
       - core
 
-  # rest-api-service:
-  #   build:
-  #     context: ./core-backend
-  #     dockerfile: RestApiService/Dockerfile
-  #   environment:
-  #     ASPNETCORE_HTTP_PORTS: "8080"
-  #     TRADE_DB_CONNECTION: "Server=trade-mssql,1433;Database=TradeDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
-  #   depends_on:
-  #     trade-mssql:
-  #       condition: service_healthy
-  #   networks:
-  #     - core
+  rest-api-service:
+    build:
+      context: ./core-backend
+      dockerfile: RestApiService/Dockerfile
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+    depends_on:
+      order-service:
+        condition: service_started
+    networks:
+      - core
+      - edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.rest-api.rule=PathPrefix(`/api`)"
 
   security-service:
     build:
@@ -278,9 +285,13 @@ volumes:
   grafana-data:
 
 networks:
+  edge:
+    driver: bridge
   fix:
     driver: bridge
+    internal: true
   core:
     driver: bridge
+    internal: true
   observability:
     driver: bridge
