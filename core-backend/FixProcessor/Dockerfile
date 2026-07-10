@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # ---- build stage ----
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -5,10 +7,12 @@ WORKDIR /src
 # copy csprojs first for cached restore
 COPY Shared/Shared.csproj Shared/
 COPY FixProcessor/FixProcessor.csproj FixProcessor/
-RUN dotnet restore FixProcessor/FixProcessor.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet restore FixProcessor/FixProcessor.csproj
 
 COPY . .
-RUN dotnet publish FixProcessor/FixProcessor.csproj -c Release -o /out
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet publish FixProcessor/FixProcessor.csproj -c Release -o /out
 
 # ---- runtime stage ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

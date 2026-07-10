@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # ---- build stage ----
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -6,10 +8,12 @@ WORKDIR /src
 COPY Shared/Shared.csproj Shared/
 COPY SecurityService/SecurityService.csproj SecurityService/
 COPY TradeData/TradeData.csproj TradeData/
-RUN dotnet restore SecurityService/SecurityService.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet restore SecurityService/SecurityService.csproj
 
 COPY . .
-RUN dotnet publish SecurityService/SecurityService.csproj -c Release -o /out
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet publish SecurityService/SecurityService.csproj -c Release -o /out
 
 # ---- runtime stage ----
 FROM mcr.microsoft.com/dotnet/aspnet:10.0

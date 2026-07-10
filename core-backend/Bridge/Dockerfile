@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 # ---- build stage ----
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
@@ -5,10 +7,12 @@ WORKDIR /src
 # copy csprojs first for cached restore
 COPY Shared/Shared.csproj Shared/
 COPY Bridge/Bridge.csproj Bridge/
-RUN dotnet restore Bridge/Bridge.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet restore Bridge/Bridge.csproj
 
 COPY . .
-RUN dotnet publish Bridge/Bridge.csproj -c Release -o /out
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet publish Bridge/Bridge.csproj -c Release -o /out
 
 # ---- runtime stage ----
 FROM mcr.microsoft.com/dotnet/runtime:10.0
