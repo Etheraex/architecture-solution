@@ -1,4 +1,4 @@
-using FixBackendShared.Grpc;
+using Shared.Grpc;
 using Grpc.Core;
 using Microsoft.AspNetCore.Mvc;
 using RestApiService.Models;

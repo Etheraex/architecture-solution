@@ -1,6 +1,6 @@
 using Serilog;
-using FixBackendShared.Logging;
-using FixBackendShared.Grpc;
+using Shared.Logging;
+using Shared.Grpc;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using FixProcessor.Services;
 

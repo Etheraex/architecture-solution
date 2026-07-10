@@ -1,7 +1,7 @@
-using FixBackendShared.Logging;
+using Shared.Logging;
 using Bridge;
 using Serilog;
-using FixBackendShared.Grpc;
+using Shared.Grpc;
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Logging.ClearProviders();

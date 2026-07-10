@@ -1,5 +1,5 @@
 syntax = "proto3";
-option csharp_namespace = "FixBackendShared.Grpc";
+option csharp_namespace = "Shared.Grpc";
 package configuration;
 
 enum ConfigurationEntityType {

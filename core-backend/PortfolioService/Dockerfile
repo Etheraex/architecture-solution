@@ -3,7 +3,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # copy csprojs first for cached restore
-COPY FixBackendShared/FixBackendShared.csproj FixBackendShared/
+COPY Shared/Shared.csproj Shared/
 COPY PortfolioService/PortfolioService.csproj PortfolioService/
 COPY TradeData/TradeData.csproj TradeData/
 RUN dotnet restore PortfolioService/PortfolioService.csproj

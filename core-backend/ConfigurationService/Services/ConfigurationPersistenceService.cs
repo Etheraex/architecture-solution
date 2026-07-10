@@ -1,10 +1,10 @@
-using FixBackendShared.Grpc;
+using Shared.Grpc;
 using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
 using TradeData;
 using TradeData.Entities;
 using EfConfigurationEntity = TradeData.Entities.ConfigurationEntity;
-using ProtoConfigurationEntity = FixBackendShared.Grpc.ConfigurationEntity;
+using ProtoConfigurationEntity = Shared.Grpc.ConfigurationEntity;
 
 namespace ConfigurationService.Services;
 

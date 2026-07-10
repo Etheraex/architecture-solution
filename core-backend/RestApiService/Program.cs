@@ -1,6 +1,6 @@
 using Serilog;
-using FixBackendShared.Logging;
-using FixBackendShared.Grpc;
+using Shared.Logging;
+using Shared.Grpc;
 
 var builder = WebApplication.CreateBuilder(args);
 

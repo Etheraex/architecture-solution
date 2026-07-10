@@ -1,10 +1,10 @@
 using System.Globalization;
-using FixBackendShared.Grpc;
+using Shared.Grpc;
 using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
 using TradeData;
 using TradeData.Entities;
-using ProtoOrder = FixBackendShared.Grpc.Order;
+using ProtoOrder = Shared.Grpc.Order;
 
 namespace OrderService.Services;
 

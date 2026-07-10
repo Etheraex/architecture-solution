@@ -4,7 +4,7 @@ WORKDIR /src
 
 # copy csprojs first for cached restore
 COPY RestApiService/RestApiService.csproj RestApiService/
-COPY FixBackendShared/FixBackendShared.csproj FixBackendShared/
+COPY Shared/Shared.csproj Shared/
 RUN dotnet restore RestApiService/RestApiService.csproj
 
 COPY . .

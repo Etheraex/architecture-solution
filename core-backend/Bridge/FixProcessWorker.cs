@@ -2,7 +2,7 @@ using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using System.Text.Json;
 using System.Text;
-using FixBackendShared.Grpc;
+using Shared.Grpc;
 using Grpc.Core;
 
 namespace Bridge;

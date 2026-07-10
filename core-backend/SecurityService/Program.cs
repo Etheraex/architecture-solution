@@ -1,4 +1,4 @@
-using FixBackendShared.Logging;
+using Shared.Logging;
 using Serilog;
 using Microsoft.EntityFrameworkCore;
 using TradeData;

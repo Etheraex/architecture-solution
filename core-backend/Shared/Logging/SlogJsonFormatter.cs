@@ -2,7 +2,7 @@ using Serilog.Events;
 using Serilog.Formatting;
 using Serilog.Formatting.Json;
 
-namespace FixBackendShared.Logging;
+namespace Shared.Logging;
 
 public class SlogJsonFormatter : ITextFormatter
 {

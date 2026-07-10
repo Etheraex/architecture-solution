@@ -1,4 +1,4 @@
-using FixBackendShared.Grpc;
+using Shared.Grpc;
 
 namespace RestApiService.Models;
 
