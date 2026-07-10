@@ -1,7 +1,7 @@
 services:
-  fix-traefik:
+  traefik:
     image: traefik:v3.7
-    container_name: fix-traefik
+    container_name: traefik
     restart: unless-stopped
     command:
       - "--providers.docker=true"
