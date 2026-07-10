@@ -18,6 +18,12 @@ builder.Services.AddGrpcClient<OrderPersistence.OrderPersistenceClient>(options 
 			?? throw new InvalidOperationException("ORDERSERVICE_URL environment variable is not set.")
 	));
 
+builder.Services.AddGrpcClient<ConfigurationPersistance.ConfigurationPersistanceClient>(options =>
+	options.Address = new Uri(
+		Environment.GetEnvironmentVariable("CONFIGURATIONSERVICE_URL")
+			?? throw new InvalidOperationException("CONFIGURATIONSERVICE_URL environment variable is not set.")
+	));
+
 builder.Services.AddControllers();
 
 var app = builder.Build();

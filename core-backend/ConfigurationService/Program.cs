@@ -1,7 +1,9 @@
+using ConfigurationService.Services;
 using FixBackendShared.Logging;
 using Serilog;
 using Microsoft.EntityFrameworkCore;
 using TradeData;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,17 +15,20 @@ builder.Services.AddSerilog(lc => lc
 	.Enrich.WithProperty("service", "configuration-service")
 	.WriteTo.Console(new SlogJsonFormatter()));
 
+builder.WebHost.ConfigureKestrel(options =>
+	options.ConfigureEndpointDefaults(listen => listen.Protocols = HttpProtocols.Http2));
+
 builder.Services.AddDbContext<TradeDbContext>(options => 
 	options.UseSqlServer(
 		Environment.GetEnvironmentVariable("TRADE_DB_CONNECTION")
 			?? throw new InvalidOperationException("TRADE_DB_CONNECTION environment variable is not set."),
 		sql => sql.EnableRetryOnFailure()));
 
-builder.Services.AddControllers();
+builder.Services.AddGrpc();
 
 var app = builder.Build();
 
-app.MapControllers();
+app.MapGrpcService<ConfigurationPersistenceService>();
 
 app.UseSerilogRequestLogging(options =>
 {

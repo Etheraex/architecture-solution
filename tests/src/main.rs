@@ -8,6 +8,8 @@ mod fix_generator;
 mod action;
 use action::Action;
 
+mod rest_api;
+
 const HOST: &str = "http://localhost:80";
 
 const TOKEN_URL: &str = "/token";
@@ -23,6 +25,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match action {
         Action::EndToEnd => run_end_to_end(),
         Action::Auth => run_auth(),
+        Action::RestApi => rest_api::run(HOST),
         Action::None => Ok(()),
     }
 }

@@ -9,6 +9,7 @@ services:
       - "--entrypoints.web.address=:80"
       - "--api.dashboard=true"
       - "--api.insecure=true"
+      - "--providers.docker.network=architecture-solution_edge"
     ports:
       - "80:80"
       - "8081:8080"
@@ -188,8 +189,12 @@ services:
       dockerfile: RestApiService/Dockerfile
     environment:
       ASPNETCORE_HTTP_PORTS: "8080"
+      ORDERSERVICE_URL: "http://order-service:8080"
+      CONFIGURATIONSERVICE_URL: "http://configuration-service:8080"
     depends_on:
       order-service:
+        condition: service_started
+      configuration-service:
         condition: service_started
     networks:
       - core
@@ -197,6 +202,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.rest-api.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.rest-api.entrypoints=web"
+      - "traefik.http.services.rest-api.loadbalancer.server.port=8080"
+      - "traefik.http.routers.rest-api.middlewares=jwt-auth"
 
   security-service:
     build:

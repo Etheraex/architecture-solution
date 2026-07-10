@@ -1,0 +1,32 @@
+syntax = "proto3";
+option csharp_namespace = "FixBackendShared.Grpc";
+package configuration;
+
+enum ConfigurationEntityType {
+    CONFIGURATION_ENTITY_TYPE_UNSPECIFIED = 0;
+    STRATEGY = 1;
+    BROKER   = 2;
+    FUND     = 3;
+    EXCHANGE = 4;
+    MANAGER  = 5;
+}
+
+message ConfigurationEntity {
+    int32 id                     = 1;
+    string code                  = 2;
+    string description           = 3;
+    ConfigurationEntityType type = 4;
+}
+
+message PersistResponse { int32 id = 1; }
+message GetAllRequest  { repeated ConfigurationEntityType type_filter = 1; }
+message GetAllResponse { repeated ConfigurationEntity entities = 1; }
+message GetByIdRequest {
+    int32 id                     = 1;
+    ConfigurationEntityType type = 2; }
+
+service ConfigurationPersistance {
+    rpc Persist (ConfigurationEntity) returns (PersistResponse);
+    rpc GetAll  (GetAllRequest)       returns (GetAllResponse);
+    rpc GetById (GetByIdRequest)      returns (ConfigurationEntity);
+}
