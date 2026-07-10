@@ -1,42 +1,22 @@
-using Serilog;
 using Shared.Logging;
 using Shared.Grpc;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Shared.GrpcClient;
 using FixProcessor.Services;
+using Shared.Web.WebServiceExtensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
+builder
+	.AddTradeLogging("fix-processor")
+	.SetHttp2KestrelConfig();
 
-builder.Services.AddSerilog(lc => lc
-	.MinimumLevel.Information()
-	.Enrich.FromLogContext()
-	.Enrich.WithProperty("service", "fix-processor")
-	.WriteTo.Console(new SlogJsonFormatter()));
-
-builder.WebHost.ConfigureKestrel(options =>
-	options.ConfigureEndpointDefaults(listen => listen.Protocols = HttpProtocols.Http2));
-
-builder.Services.AddGrpcClient<OrderPersistence.OrderPersistenceClient>(options =>
-	options.Address = new Uri(
-		Environment.GetEnvironmentVariable("ORDERSERVICE_URL")
-			?? throw new InvalidOperationException("ORDERSERVICE_URL environment variable is not set.")
-	));
+builder.Services.AddTradeGrpcClient<OrderPersistence.OrderPersistenceClient>("ORDERSERVICE_URL");
 
 builder.Services.AddGrpc();
 
 var app = builder.Build();
 
-app.UseSerilogRequestLogging(options =>
-{
-	options.MessageTemplate = "HTTP request";
-	options.EnrichDiagnosticContext = (diag, http) =>
-	{
-		diag.Set("method", http.Request.Method);
-		diag.Set("path", http.Request.Path);
-		diag.Set("status", http.Response.StatusCode);
-	};
-});
+app.UseSerilogRequestLoggingConfig();
 
 app.MapGrpcService<FixProcessingService>();
 

@@ -1,28 +1,15 @@
 using Shared.Logging;
-using Serilog;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using OrderService.Services;
 using TradeData;
+using Shared.Web.WebServiceExtensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
-
-builder.Services.AddSerilog(lc => lc
-	.MinimumLevel.Information()
-	.Enrich.FromLogContext()
-	.Enrich.WithProperty("service", "order-service")
-	.WriteTo.Console(new SlogJsonFormatter()));
-
-builder.WebHost.ConfigureKestrel(options =>
-	options.ConfigureEndpointDefaults(listen => listen.Protocols = HttpProtocols.Http2));
-
-builder.Services.AddDbContext<TradeDbContext>(options => 
-	options.UseSqlServer(
-		Environment.GetEnvironmentVariable("TRADE_DB_CONNECTION")
-			?? throw new InvalidOperationException("TRADE_DB_CONNECTION environment variable is not set."),
-		sql => sql.EnableRetryOnFailure()));
+builder
+	.AddTradeLogging("order-service")
+	.SetHttp2KestrelConfig()
+	.AddTradeDbContext();
 
 builder.Services.AddGrpc();
 
@@ -34,16 +21,7 @@ using (var scope = app.Services.CreateScope())
 	db.Database.Migrate();
 }
 
-app.UseSerilogRequestLogging(options =>
-{
-	options.MessageTemplate = "HTTP request";
-	options.EnrichDiagnosticContext = (diag, http) =>
-	{
-		diag.Set("method", http.Request.Method);
-		diag.Set("path", http.Request.Path);
-		diag.Set("status", http.Response.StatusCode);
-	};
-});
+app.UseSerilogRequestLoggingConfig();
 
 app.MapGrpcService<OrderPersistenceService>();
 

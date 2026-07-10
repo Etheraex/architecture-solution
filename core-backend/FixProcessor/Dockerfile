@@ -6,7 +6,9 @@ WORKDIR /src
 
 # copy csprojs first for cached restore
 COPY Shared/Shared.csproj Shared/
+COPY Shared.Web/Shared.Web.csproj Shared.Web/
 COPY FixProcessor/FixProcessor.csproj FixProcessor/
+COPY TradeData/TradeData.csproj TradeData/
 RUN --mount=type=cache,target=/root/.nuget/packages \
     dotnet restore FixProcessor/FixProcessor.csproj
 

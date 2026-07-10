@@ -5,8 +5,10 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # copy csprojs first for cached restore
-COPY RestApiService/RestApiService.csproj RestApiService/
 COPY Shared/Shared.csproj Shared/
+COPY Shared.Web/Shared.Web.csproj Shared.Web/
+COPY RestApiService/RestApiService.csproj RestApiService/
+COPY TradeData/TradeData.csproj TradeData/
 RUN --mount=type=cache,target=/root/.nuget/packages \
     dotnet restore RestApiService/RestApiService.csproj
 

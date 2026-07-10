@@ -1,43 +1,21 @@
-using Serilog;
 using Shared.Logging;
 using Shared.Grpc;
+using Shared.GrpcClient;
+using Shared.Web.WebServiceExtensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Logging.ClearProviders();
+builder.AddTradeLogging("rest-api-service");
 
-builder.Services.AddSerilog(lc => lc
-	.MinimumLevel.Information()
-	.Enrich.FromLogContext()
-	.Enrich.WithProperty("service", "rest-api-service")
-	.WriteTo.Console(new SlogJsonFormatter()));
+builder.Services.AddTradeGrpcClient<OrderPersistence.OrderPersistenceClient>("ORDERSERVICE_URL");
 
-builder.Services.AddGrpcClient<OrderPersistence.OrderPersistenceClient>(options =>
-	options.Address = new Uri(
-		Environment.GetEnvironmentVariable("ORDERSERVICE_URL")
-			?? throw new InvalidOperationException("ORDERSERVICE_URL environment variable is not set.")
-	));
-
-builder.Services.AddGrpcClient<ConfigurationPersistance.ConfigurationPersistanceClient>(options =>
-	options.Address = new Uri(
-		Environment.GetEnvironmentVariable("CONFIGURATIONSERVICE_URL")
-			?? throw new InvalidOperationException("CONFIGURATIONSERVICE_URL environment variable is not set.")
-	));
+builder.Services.AddTradeGrpcClient<ConfigurationPersistance.ConfigurationPersistanceClient>("CONFIGURATIONSERVICE_URL");
 
 builder.Services.AddControllers();
 
 var app = builder.Build();
 
-app.UseSerilogRequestLogging(options =>
-{
-	options.MessageTemplate = "HTTP request";
-	options.EnrichDiagnosticContext = (diag, http) =>
-	{
-		diag.Set("method", http.Request.Method);
-		diag.Set("path", http.Request.Path);
-		diag.Set("status", http.Response.StatusCode);
-	};
-});
+app.UseSerilogRequestLoggingConfig();
 
 app.MapControllers();
 
