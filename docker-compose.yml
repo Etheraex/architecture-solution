@@ -97,6 +97,19 @@ services:
       timeout: 5s
       retries: 5
 
+  trade-redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    container_name: trade-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - core
+
   fix-ingress:
     build:
       context: ./fix-backend
@@ -151,8 +164,11 @@ services:
     environment:
       ASPNETCORE_HTTP_PORTS: "8080"
       TRADE_DB_CONNECTION: "Server=trade-mssql,1433;Database=TradeDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      REDIS_CONNECTION: "trade-redis:6379"
     depends_on:
       trade-mssql:
+        condition: service_healthy
+      trade-redis:
         condition: service_healthy
     networks:
       - core
